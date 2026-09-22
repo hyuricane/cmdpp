@@ -3,7 +3,7 @@ PREFIX ?= $(HOME)/.local
 INSTALL_DIR ?= $(PREFIX)/bin
 GO := go
 
-.PHONY: all build install uninstall test test-coverage fmt vet tidy clean run help
+.PHONY: all build build-all install uninstall test test-coverage fmt vet tidy clean run help
 
 # Default target
 all: build
@@ -13,6 +13,18 @@ build:
 	@echo "==> Building $(BINARY_NAME)..."
 	$(GO) build -ldflags "-s -w" -o $(BINARY_NAME) main.go
 	@echo "✓ Binary built: ./$(BINARY_NAME)"
+
+## build-all: Cross-compile cmdpp for supported platforms into dist/
+build-all:
+	@echo "==> Building for all platforms..."
+	@mkdir -p dist
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GO) build -trimpath -ldflags "-s -w" -o dist/$(BINARY_NAME)_linux_amd64 main.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GO) build -trimpath -ldflags "-s -w" -o dist/$(BINARY_NAME)_linux_arm64 main.go
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 $(GO) build -trimpath -ldflags "-s -w" -o dist/$(BINARY_NAME)_darwin_amd64 main.go
+	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 $(GO) build -trimpath -ldflags "-s -w" -o dist/$(BINARY_NAME)_darwin_arm64 main.go
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GO) build -trimpath -ldflags "-s -w" -o dist/$(BINARY_NAME)_windows_amd64.exe main.go
+	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 $(GO) build -trimpath -ldflags "-s -w" -o dist/$(BINARY_NAME)_windows_arm64.exe main.go
+	@echo "✓ Multi-platform binaries built in dist/"
 
 ## install: Install cmdpp to $(INSTALL_DIR)
 install: build
