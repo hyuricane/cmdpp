@@ -1,3 +1,35 @@
+# Binaries
 cmdpp
 bin/
+dist/
+
+# Architecture-specific binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test artifacts and coverage
+*.test
+*.out
+coverage.txt
+coverage.html
+profile.pprof
+
+# Temporary and swap files
 *.tmp*
+*.swp
+*.swo
+*~
+.DS_Store
+
+# IDE and editor settings
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Environment files
+.env
+.env.local
