@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hyuricane/cmdpp/cli"
@@ -10,7 +11,7 @@ import (
 	"github.com/hyuricane/cmdpp/tui"
 )
 
-const Version = "1.0.0"
+var Version = "1.0.0"
 
 func main() {
 	s, err := store.Load()
@@ -60,7 +61,7 @@ func main() {
 		cli.PrintHelp(os.Stdout)
 
 	case "version", "--version", "-v":
-		fmt.Printf("cmdpp v%s\n", Version)
+		fmt.Printf("cmdpp v%s\n", strings.TrimPrefix(Version, "v"))
 
 	default:
 		// Check if the argument is actually the name of a stored command
