@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"cmdpp/cli"
-	"cmdpp/store"
-	"cmdpp/tui"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/hyuricane/cmdpp/cli"
+	"github.com/hyuricane/cmdpp/store"
+	"github.com/hyuricane/cmdpp/tui"
 )
 
 const Version = "1.0.0"

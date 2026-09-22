@@ -5,8 +5,8 @@ import (
 	"io"
 	"strings"
 
-	"cmdpp/store"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/hyuricane/cmdpp/store"
 )
 
 var (
@@ -18,10 +18,11 @@ var (
 
 // Add handles the 'cmdpp add' subcommand.
 // Supports:
-//   cmdpp add <name> --cmd "<command>" [--desc "<description>"]
-//   cmdpp add <name> -c "<command>" [-d "<description>"]
-//   cmdpp add --cmd "<command>" <name>
-//   cmdpp add <name> "<command>"
+//
+//	cmdpp add <name> --cmd "<command>" [--desc "<description>"]
+//	cmdpp add <name> -c "<command>" [-d "<description>"]
+//	cmdpp add --cmd "<command>" <name>
+//	cmdpp add <name> "<command>"
 func Add(s *store.Store, out io.Writer, args []string) error {
 	var (
 		name        string

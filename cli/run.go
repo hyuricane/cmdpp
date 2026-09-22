@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"cmdpp/store"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/hyuricane/cmdpp/store"
 )
 
 var (

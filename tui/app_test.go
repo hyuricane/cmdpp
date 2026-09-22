@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"cmdpp/store"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/hyuricane/cmdpp/store"
 )
 
 func TestTUIFlow(t *testing.T) {

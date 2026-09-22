@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"cmdpp/store"
+	"github.com/hyuricane/cmdpp/store"
 )
 
 // Rm handles the 'cmdpp rm' (and remove/delete) subcommand.

@@ -1,4 +1,4 @@
-module cmdpp
+module github.com/hyuricane/cmdpp
 
 go 1.27.1
 

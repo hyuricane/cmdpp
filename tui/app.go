@@ -5,11 +5,11 @@ import (
 	"strings"
 	"time"
 
-	"cmdpp/cli"
-	"cmdpp/store"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/hyuricane/cmdpp/cli"
+	"github.com/hyuricane/cmdpp/store"
 )
 
 type AppAction int
@@ -24,22 +24,22 @@ type clearToastMsg struct{}
 
 // Model is the main Bubble Tea model for cmdpp.
 type Model struct {
-	store             *store.Store
-	commands          []store.Command
-	filtered          []store.Command
-	cursor            int
-	viewportTop       int
-	maxVisibleRows    int
-	width             int
-	height            int
-	searchInput       textinput.Model
-	searchFocused     bool
-	modal             *ModalModel
-	isConfirmingDel   bool
-	toastMsg          string
-	toastIsErr        bool
-	chosenCommand     *store.Command
-	action            AppAction
+	store           *store.Store
+	commands        []store.Command
+	filtered        []store.Command
+	cursor          int
+	viewportTop     int
+	maxVisibleRows  int
+	width           int
+	height          int
+	searchInput     textinput.Model
+	searchFocused   bool
+	modal           *ModalModel
+	isConfirmingDel bool
+	toastMsg        string
+	toastIsErr      bool
+	chosenCommand   *store.Command
+	action          AppAction
 }
 
 // NewModel initializes the TUI model.
