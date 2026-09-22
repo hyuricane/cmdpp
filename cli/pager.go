@@ -7,13 +7,12 @@ import (
 	"os/exec"
 	"strings"
 
-	"golang.org/x/sys/unix"
+	"github.com/mattn/go-isatty"
 )
 
 // IsTerminal returns true if the given file descriptor is attached to a terminal.
 func IsTerminal(fd uintptr) bool {
-	_, err := unix.IoctlGetTermios(int(fd), unix.TCGETS)
-	return err == nil
+	return isatty.IsTerminal(fd) || isatty.IsCygwinTerminal(fd)
 }
 
 // DisplayWithPager outputs the given text using `more` if stdout is a TTY and `more` is available.
