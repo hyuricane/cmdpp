@@ -1,0 +1,115 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release tag (e.g. v1.0.0)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Release Binaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          check-latest: true
+
+      - name: Run tests
+        run: go test -v ./...
+
+      - name: Determine release version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.tag_name }}" ]; then
+            TAG="${{ github.event.inputs.tag_name }}"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG="${{ github.ref_name }}"
+          else
+            TAG="v1.0.0"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "clean_version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and package release binaries
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          CLEAN_VERSION: ${{ steps.version.outputs.clean_version }}
+        run: |
+          DIST_DIR="dist"
+          rm -rf "${DIST_DIR}"
+          mkdir -p "${DIST_DIR}"
+
+          TARGETS=(
+            "linux/amd64"
+            "linux/arm64"
+            "darwin/amd64"
+            "darwin/arm64"
+            "windows/amd64"
+            "windows/arm64"
+          )
+
+          for TARGET in "${TARGETS[@]}"; do
+            GOOS="${TARGET%/*}"
+            GOARCH="${TARGET#*/}"
+
+            BINARY_NAME="cmdpp"
+            if [ "${GOOS}" = "windows" ]; then
+              BINARY_NAME="cmdpp.exe"
+            fi
+
+            BUILD_DIR=$(mktemp -d)
+            echo "==> Compiling for ${GOOS}/${GOARCH}..."
+
+            CGO_ENABLED=0 GOOS="${GOOS}" GOARCH="${GOARCH}" go build \
+              -trimpath \
+              -ldflags "-s -w -X main.Version=${TAG}" \
+              -o "${BUILD_DIR}/${BINARY_NAME}" \
+              main.go
+
+            # Include README and LICENSE if available
+            [ -f README.md ] && cp README.md "${BUILD_DIR}/"
+            [ -f LICENSE ] && cp LICENSE "${BUILD_DIR}/"
+
+            ARCHIVE_NAME="cmdpp_${CLEAN_VERSION}_${GOOS}_${GOARCH}"
+            if [ "${GOOS}" = "windows" ]; then
+              (cd "${BUILD_DIR}" && zip -9 -q "${OLDPWD}/${DIST_DIR}/${ARCHIVE_NAME}.zip" *)
+            else
+              tar -czf "${DIST_DIR}/${ARCHIVE_NAME}.tar.gz" -C "${BUILD_DIR}" .
+            fi
+
+            rm -rf "${BUILD_DIR}"
+          done
+
+          echo "==> Generating SHA256 checksums..."
+          (cd "${DIST_DIR}" && sha256sum * > checksums.txt)
+
+      - name: Create GitHub Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/checksums.txt
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.tag, '-rc') || contains(steps.version.outputs.tag, '-beta') || contains(steps.version.outputs.tag, '-alpha') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
