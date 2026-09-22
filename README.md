@@ -15,17 +15,80 @@ A fast, keyboard-driven CLI and TUI tool to store, manage, and instantly trigger
 
 ---
 
-## Installation & Location
+## Installation
 
-The `cmdpp` binary is installed at `~/.local/bin/cmdpp` (which is in your `$PATH`).
+Ensure `~/.local/bin` is in your `$PATH` (standard on modern Linux and macOS systems).
 
-Source directory: `~/Work/cmdpp`
+### Option 1: Automated Install (Linux & macOS - Recommended)
 
-To rebuild or reinstall at any time:
+The installer automatically detects your operating system and architecture (`x86_64` or `arm64`), downloads the latest release with live progress, and installs the binary to `~/.local/bin/cmdpp`:
+
+Using `curl`:
 ```bash
-cd ~/Work/cmdpp
-go build -o ~/.local/bin/cmdpp main.go
+curl -fsSL https://raw.githubusercontent.com/hyuricane/cmdpp/master/install.sh | bash
 ```
+
+Using `wget`:
+```bash
+wget -qO- https://raw.githubusercontent.com/hyuricane/cmdpp/master/install.sh | bash
+```
+
+*(Optional: You can specify a custom install directory by setting `BINDIR`, e.g.: `curl -fsSL ... | BINDIR=/usr/local/bin bash`)*
+
+---
+
+### Option 2: Manual Binary Download
+
+If you prefer to download and extract pre-compiled binaries manually without running the script:
+
+* **Linux (x86_64 / amd64):**
+  ```bash
+  mkdir -p ~/.local/bin
+  curl -sSL https://github.com/hyuricane/cmdpp/releases/download/v0.1.0/cmdpp_0.1.0_linux_amd64.tar.gz | tar -xz -C ~/.local/bin ./cmdpp
+  ```
+
+* **Linux (ARM64 / aarch64):**
+  ```bash
+  mkdir -p ~/.local/bin
+  curl -sSL https://github.com/hyuricane/cmdpp/releases/download/v0.1.0/cmdpp_0.1.0_linux_arm64.tar.gz | tar -xz -C ~/.local/bin ./cmdpp
+  ```
+
+* **macOS (Apple Silicon - M1/M2/M3/M4 / arm64):**
+  ```bash
+  mkdir -p ~/.local/bin
+  curl -sSL https://github.com/hyuricane/cmdpp/releases/download/v0.1.0/cmdpp_0.1.0_darwin_arm64.tar.gz | tar -xz -C ~/.local/bin ./cmdpp
+  ```
+
+* **macOS (Intel / amd64):**
+  ```bash
+  mkdir -p ~/.local/bin
+  curl -sSL https://github.com/hyuricane/cmdpp/releases/download/v0.1.0/cmdpp_0.1.0_darwin_amd64.tar.gz | tar -xz -C ~/.local/bin ./cmdpp
+  ```
+
+* **Windows & Checksums:**
+  Download `.zip` packages for Windows (`amd64` / `arm64`) and `checksums.txt` from the [GitHub Releases Page](https://github.com/hyuricane/cmdpp/releases/latest).
+
+---
+
+### Option 2: Using `go install`
+If you have Go (1.22+) installed:
+```bash
+go install github.com/hyuricane/cmdpp@latest
+```
+
+---
+
+### Option 3: Build from Source
+```bash
+git clone https://github.com/hyuricane/cmdpp.git
+cd cmdpp
+make install
+```
+*(By default, installs to `~/.local/bin/cmdpp`. You can customize the location with `PREFIX=/usr/local make install`)*
+
+---
+
+## Configuration
 
 Configuration and stored commands are saved in JSON format at:
 ```
