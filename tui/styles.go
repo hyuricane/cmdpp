@@ -139,4 +139,23 @@ var (
 				Border(lipgloss.RoundedBorder()).
 				BorderForeground(MutedColor).
 				Padding(0, 1)
+
+	// Dropdown suggestion styles
+	DropdownContainerStyle = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(MutedColor).
+				Padding(0, 1).
+				MarginBottom(1)
+
+	DropdownHeaderStyle = lipgloss.NewStyle().
+				Foreground(AccentColor).
+				Bold(true)
+
+	DropdownItemNormal = lipgloss.NewStyle().
+				Foreground(TextColor)
+
+	DropdownItemSelected = lipgloss.NewStyle().
+				Background(HighlightBg).
+				Foreground(SecondaryColor).
+				Bold(true)
 )

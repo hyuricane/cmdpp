@@ -254,14 +254,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case "a":
-			modal := NewModal(ModalModeAdd, "", "", "")
+			modal := NewModal(ModalModeAdd, "", "", "", m.store.GetSuggestions(500))
 			m.modal = &modal
 			return m, nil
 
 		case "e":
 			if len(m.filtered) > 0 {
 				sel := m.filtered[m.cursor]
-				modal := NewModal(ModalModeEdit, sel.Name, sel.Cmd, sel.Description)
+				modal := NewModal(ModalModeEdit, sel.Name, sel.Cmd, sel.Description, m.store.GetSuggestions(500))
 				m.modal = &modal
 				return m, nil
 			}
