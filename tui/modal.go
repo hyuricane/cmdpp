@@ -29,6 +29,7 @@ type ModalModel struct {
 	AllSuggestions      []string
 	FilteredSuggestions []string
 	SelectedSugIndex    int // -1 when typing in the text input, >= 0 when a dropdown item is highlighted
+	DropdownViewportTop int // Index of the first visible dropdown item
 }
 
 // NewModal creates an initialized modal dialog.
@@ -89,15 +90,15 @@ func (m *ModalModel) updateSuggestions() {
 	if len(m.AllSuggestions) == 0 {
 		m.FilteredSuggestions = nil
 		m.SelectedSugIndex = -1
+		m.DropdownViewportTop = 0
 		return
 	}
 
 	query := strings.TrimSpace(m.Inputs[1].Value())
 	if query == "" {
-		limit := min(maxVisibleDropdownItems, len(m.AllSuggestions))
-		m.FilteredSuggestions = make([]string, limit)
-		copy(m.FilteredSuggestions, m.AllSuggestions[:limit])
-		m.SelectedSugIndex = -1
+		m.FilteredSuggestions = make([]string, len(m.AllSuggestions))
+		copy(m.FilteredSuggestions, m.AllSuggestions)
+		m.DropdownViewportTop = 0
 		return
 	}
 
@@ -112,26 +113,24 @@ func (m *ModalModel) updateSuggestions() {
 		} else if strings.Contains(sLower, queryLower) {
 			containsMatches = append(containsMatches, s)
 		}
-		if len(prefixMatches)+len(containsMatches) >= maxVisibleDropdownItems*4 {
-			break
-		}
 	}
 
 	matches := append(prefixMatches, containsMatches...)
-	if len(matches) > maxVisibleDropdownItems {
-		matches = matches[:maxVisibleDropdownItems]
-	}
 
 	// If the only matching suggestion is identical to what's already typed, hide dropdown
 	if len(matches) == 1 && matches[0] == strings.TrimSpace(m.Inputs[1].Value()) {
 		m.FilteredSuggestions = nil
 		m.SelectedSugIndex = -1
+		m.DropdownViewportTop = 0
 		return
 	}
 
 	m.FilteredSuggestions = matches
 	if m.SelectedSugIndex >= len(m.FilteredSuggestions) {
 		m.SelectedSugIndex = len(m.FilteredSuggestions) - 1
+	}
+	if m.DropdownViewportTop > m.SelectedSugIndex && m.SelectedSugIndex >= 0 {
+		m.DropdownViewportTop = m.SelectedSugIndex
 	}
 }
 
@@ -144,6 +143,7 @@ func (m *ModalModel) Update(msg tea.Msg) (tea.Cmd, bool, bool) {
 		case "esc":
 			if m.FocusIndex == 1 && m.SelectedSugIndex >= 0 {
 				m.SelectedSugIndex = -1
+				m.DropdownViewportTop = 0
 				return nil, false, false
 			}
 			return nil, false, true
@@ -153,6 +153,7 @@ func (m *ModalModel) Update(msg tea.Msg) (tea.Cmd, bool, bool) {
 				m.Inputs[1].SetValue(m.FilteredSuggestions[m.SelectedSugIndex])
 				m.Inputs[1].CursorEnd()
 				m.SelectedSugIndex = -1
+				m.DropdownViewportTop = 0
 				m.updateSuggestions()
 				m.nextFocus()
 				return nil, false, false
@@ -168,11 +169,12 @@ func (m *ModalModel) Update(msg tea.Msg) (tea.Cmd, bool, bool) {
 			if m.FocusIndex == 1 && len(m.FilteredSuggestions) > 0 {
 				if m.SelectedSugIndex < len(m.FilteredSuggestions)-1 {
 					m.SelectedSugIndex++
+					if m.SelectedSugIndex >= m.DropdownViewportTop+maxVisibleDropdownItems {
+						m.DropdownViewportTop = m.SelectedSugIndex - maxVisibleDropdownItems + 1
+					}
 					return nil, false, false
 				}
-				// Reached bottom of dropdown: advance to next field
-				m.SelectedSugIndex = -1
-				m.nextFocus()
+				// At bottom of suggestions: stay on the last item
 				return nil, false, false
 			}
 			m.nextFocus()
@@ -182,20 +184,51 @@ func (m *ModalModel) Update(msg tea.Msg) (tea.Cmd, bool, bool) {
 			if m.FocusIndex == 1 && len(m.FilteredSuggestions) > 0 {
 				if m.SelectedSugIndex > 0 {
 					m.SelectedSugIndex--
+					if m.SelectedSugIndex < m.DropdownViewportTop {
+						m.DropdownViewportTop = m.SelectedSugIndex
+					}
 					return nil, false, false
 				} else if m.SelectedSugIndex == 0 {
+					// Return from first suggestion back into text input
 					m.SelectedSugIndex = -1
+					m.DropdownViewportTop = 0
 					return nil, false, false
 				}
 			}
 			m.prevFocus()
 			return nil, false, false
 
+		case "pgdown":
+			if m.FocusIndex == 1 && len(m.FilteredSuggestions) > 0 {
+				if m.SelectedSugIndex == -1 {
+					m.SelectedSugIndex = 0
+				} else {
+					m.SelectedSugIndex = min(len(m.FilteredSuggestions)-1, m.SelectedSugIndex+maxVisibleDropdownItems)
+				}
+				if m.SelectedSugIndex >= m.DropdownViewportTop+maxVisibleDropdownItems {
+					m.DropdownViewportTop = min(len(m.FilteredSuggestions)-maxVisibleDropdownItems, m.SelectedSugIndex-maxVisibleDropdownItems+1)
+				}
+				if m.DropdownViewportTop < 0 {
+					m.DropdownViewportTop = 0
+				}
+				return nil, false, false
+			}
+
+		case "pgup":
+			if m.FocusIndex == 1 && len(m.FilteredSuggestions) > 0 && m.SelectedSugIndex >= 0 {
+				m.SelectedSugIndex = max(0, m.SelectedSugIndex-maxVisibleDropdownItems)
+				if m.SelectedSugIndex < m.DropdownViewportTop {
+					m.DropdownViewportTop = m.SelectedSugIndex
+				}
+				return nil, false, false
+			}
+
 		case "enter":
 			if m.FocusIndex == 1 && m.SelectedSugIndex >= 0 && m.SelectedSugIndex < len(m.FilteredSuggestions) {
 				m.Inputs[1].SetValue(m.FilteredSuggestions[m.SelectedSugIndex])
 				m.Inputs[1].CursorEnd()
 				m.SelectedSugIndex = -1
+				m.DropdownViewportTop = 0
 				m.updateSuggestions()
 				return nil, false, false
 			}
@@ -224,6 +257,7 @@ func (m *ModalModel) Update(msg tea.Msg) (tea.Cmd, bool, bool) {
 		m.Inputs[i], cmd = m.Inputs[i].Update(msg)
 		if i == 1 && m.Inputs[1].Value() != prevVal {
 			m.SelectedSugIndex = -1
+			m.DropdownViewportTop = 0
 			m.updateSuggestions()
 		}
 		cmds = append(cmds, cmd)
@@ -237,6 +271,7 @@ func (m *ModalModel) nextFocus() {
 	m.FocusIndex = (m.FocusIndex + 1) % len(m.Inputs)
 	m.Inputs[m.FocusIndex].Focus()
 	m.SelectedSugIndex = -1
+	m.DropdownViewportTop = 0
 }
 
 func (m *ModalModel) prevFocus() {
@@ -244,6 +279,7 @@ func (m *ModalModel) prevFocus() {
 	m.FocusIndex = (m.FocusIndex - 1 + len(m.Inputs)) % len(m.Inputs)
 	m.Inputs[m.FocusIndex].Focus()
 	m.SelectedSugIndex = -1
+	m.DropdownViewportTop = 0
 }
 
 func (m *ModalModel) validate() bool {
@@ -276,12 +312,27 @@ func (m *ModalModel) Values() (string, string, string) {
 }
 
 func (m *ModalModel) renderDropdown() string {
+	total := len(m.FilteredSuggestions)
+	if total == 0 {
+		return ""
+	}
+
 	var sb strings.Builder
-	sb.WriteString(DropdownHeaderStyle.Render("▾ Suggestions (from history):") + "\n")
+
+	var headerText string
+	if m.SelectedSugIndex >= 0 {
+		headerText = fmt.Sprintf("▾ Suggestions (%d/%d):", m.SelectedSugIndex+1, total)
+	} else {
+		headerText = fmt.Sprintf("▾ Suggestions (%d matches):", total)
+	}
+	sb.WriteString(DropdownHeaderStyle.Render(headerText) + "\n")
 
 	maxCmdWidth := max(30, m.Width-16)
-	for idx, sug := range m.FilteredSuggestions {
-		disp := sug
+	start := m.DropdownViewportTop
+	end := min(total, start+maxVisibleDropdownItems)
+
+	for idx := start; idx < end; idx++ {
+		disp := m.FilteredSuggestions[idx]
 		if len(disp) > maxCmdWidth {
 			disp = disp[:maxCmdWidth-3] + "..."
 		}
@@ -295,8 +346,21 @@ func (m *ModalModel) renderDropdown() string {
 			line := fmt.Sprintf("  %s", disp)
 			sb.WriteString(DropdownItemNormal.Render(line))
 		}
-		if idx < len(m.FilteredSuggestions)-1 {
+		if idx < end-1 {
 			sb.WriteString("\n")
+		}
+	}
+
+	if total > maxVisibleDropdownItems {
+		var scrollHints []string
+		if start > 0 {
+			scrollHints = append(scrollHints, fmt.Sprintf("▲ %d more", start))
+		}
+		if end < total {
+			scrollHints = append(scrollHints, fmt.Sprintf("▼ %d more", total-end))
+		}
+		if len(scrollHints) > 0 {
+			sb.WriteString("\n" + DropdownHintStyle.Render(strings.Join(scrollHints, "  ")))
 		}
 	}
 

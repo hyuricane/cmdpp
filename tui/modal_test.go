@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -157,5 +158,62 @@ func TestModalDropdownEscDismissesSelection(t *testing.T) {
 	_, _, canceled = modal.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	if !canceled {
 		t.Errorf("expected second Esc to cancel modal")
+	}
+}
+
+func TestModalDropdownScrollingAndWindowing(t *testing.T) {
+	var suggestions []string
+	for i := 0; i < 10; i++ {
+		suggestions = append(suggestions, fmt.Sprintf("cmd-opt-%02d", i))
+	}
+
+	modal := NewModal(ModalModeAdd, "", "", "", suggestions)
+	modal.FocusIndex = 1
+	modal.Inputs[0].Blur()
+	modal.Inputs[1].Focus()
+
+	// All 10 suggestions must be available, not hard-capped to 4!
+	if len(modal.FilteredSuggestions) != 10 {
+		t.Fatalf("expected 10 available suggestions, got %d", len(modal.FilteredSuggestions))
+	}
+
+	// Navigate down 6 times (should reach index 5)
+	for i := 0; i < 6; i++ {
+		_, _, _ = modal.Update(tea.KeyMsg{Type: tea.KeyDown})
+	}
+
+	if modal.SelectedSugIndex != 5 {
+		t.Fatalf("expected SelectedSugIndex=5, got %d", modal.SelectedSugIndex)
+	}
+
+	// DropdownViewportTop should have scrolled to 2 (since 5 >= 0 + 4 -> 5 - 4 + 1 = 2)
+	if modal.DropdownViewportTop != 2 {
+		t.Errorf("expected DropdownViewportTop=2, got %d", modal.DropdownViewportTop)
+	}
+
+	// The rendered view should show the scroll indicators (▲ and ▼)
+	view := modal.View()
+	if !strings.Contains(view, "▲") {
+		t.Errorf("expected view to contain upward scroll indicator '▲', got:\n%s", view)
+	}
+	if !strings.Contains(view, "▼") {
+		t.Errorf("expected view to contain downward scroll indicator '▼', got:\n%s", view)
+	}
+	if !strings.Contains(view, "cmd-opt-05") {
+		t.Errorf("expected view to contain highlighted item 'cmd-opt-05'")
+	}
+
+	// Navigate all the way to the last item (index 9)
+	for i := 0; i < 4; i++ {
+		_, _, _ = modal.Update(tea.KeyMsg{Type: tea.KeyDown})
+	}
+	if modal.SelectedSugIndex != 9 {
+		t.Fatalf("expected SelectedSugIndex=9, got %d", modal.SelectedSugIndex)
+	}
+
+	// Press Enter to pick the 10th suggestion
+	_, _, _ = modal.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if modal.Inputs[1].Value() != "cmd-opt-09" {
+		t.Errorf("expected command input to be 'cmd-opt-09', got %q", modal.Inputs[1].Value())
 	}
 }

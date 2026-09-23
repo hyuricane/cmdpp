@@ -158,4 +158,7 @@ var (
 				Background(HighlightBg).
 				Foreground(SecondaryColor).
 				Bold(true)
+
+	DropdownHintStyle = lipgloss.NewStyle().
+				Foreground(MutedColor)
 )
