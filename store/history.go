@@ -4,46 +4,100 @@ import (
 	"bufio"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 )
 
-// DefaultHistoryFiles returns candidate shell history paths for the current user and OS.
+// DefaultHistoryFiles returns candidate shell history paths for the current user and OS,
+// prioritized so that the current user's active shell ($SHELL) appears first.
 func DefaultHistoryFiles() []string {
 	var files []string
+	seen := make(map[string]bool)
 
-	// 1. Explicit $HISTFILE
-	if hf := os.Getenv("HISTFILE"); hf != "" {
-		files = append(files, hf)
-	}
-
-	home, err := os.UserHomeDir()
-	if err == nil && home != "" {
-		// Bash
-		files = append(files, filepath.Join(home, ".bash_history"))
-		// Zsh
-		files = append(files, filepath.Join(home, ".zsh_history"))
-		files = append(files, filepath.Join(home, ".histfile"))
-		// Fish
-		if xdgData := os.Getenv("XDG_DATA_HOME"); xdgData != "" {
-			files = append(files, filepath.Join(xdgData, "fish", "fish_history"))
+	addFile := func(path string) {
+		if path == "" || seen[path] {
+			return
 		}
-		files = append(files, filepath.Join(home, ".local", "share", "fish", "fish_history"))
+		seen[path] = true
+		files = append(files, path)
 	}
 
-	// Windows PowerShell PSReadLine
+	// 1. Explicit $HISTFILE always takes highest precedence
+	if hf := os.Getenv("HISTFILE"); hf != "" {
+		addFile(hf)
+	}
+
+	home, _ := os.UserHomeDir()
+	shell := strings.ToLower(filepath.Base(os.Getenv("SHELL")))
+
+	var bashFiles, zshFiles, fishFiles, psFiles []string
+
+	if home != "" {
+		bashFiles = []string{
+			filepath.Join(home, ".bash_history"),
+		}
+		zshFiles = []string{
+			filepath.Join(home, ".zsh_history"),
+			filepath.Join(home, ".histfile"),
+		}
+		if xdgData := os.Getenv("XDG_DATA_HOME"); xdgData != "" {
+			fishFiles = append(fishFiles, filepath.Join(xdgData, "fish", "fish_history"))
+		}
+		fishFiles = append(fishFiles, filepath.Join(home, ".local", "share", "fish", "fish_history"))
+	}
+
 	if appData := os.Getenv("APPDATA"); appData != "" {
-		files = append(files, filepath.Join(appData, "Microsoft", "Windows", "PowerShell", "PSReadLine", "ConsoleHost_history.txt"))
+		psFiles = []string{
+			filepath.Join(appData, "Microsoft", "Windows", "PowerShell", "PSReadLine", "ConsoleHost_history.txt"),
+		}
+	}
+
+	addList := func(list []string) {
+		for _, p := range list {
+			addFile(p)
+		}
+	}
+
+	// Prioritize based on current $SHELL
+	switch {
+	case strings.Contains(shell, "zsh"):
+		addList(zshFiles)
+		addList(bashFiles)
+		addList(fishFiles)
+		addList(psFiles)
+	case strings.Contains(shell, "fish"):
+		addList(fishFiles)
+		addList(zshFiles)
+		addList(bashFiles)
+		addList(psFiles)
+	case strings.Contains(shell, "pwsh") || strings.Contains(shell, "powershell"):
+		addList(psFiles)
+		addList(bashFiles)
+		addList(zshFiles)
+		addList(fishFiles)
+	default: // bash, sh, or unspecified
+		addList(bashFiles)
+		addList(zshFiles)
+		addList(fishFiles)
+		addList(psFiles)
 	}
 
 	return files
 }
 
-// CleanHistoryLine strips timestamp metadata and shell-specific prefixes.
+// CleanHistoryLine strips line numbers, timestamp metadata, and shell-specific prefixes.
 func CleanHistoryLine(line string) string {
 	line = strings.TrimSpace(line)
 	if line == "" {
 		return ""
+	}
+
+	// Strip leading line numbers if present (e.g. "  493  git status" or "10: git status")
+	i := 0
+	for i < len(line) && line[i] >= '0' && line[i] <= '9' {
+		i++
+	}
+	if i > 0 && i < len(line) && (line[i] == ' ' || line[i] == '\t' || line[i] == ':') {
+		line = strings.TrimSpace(line[i+1:])
 	}
 
 	// Bash timestamp lines: '#1695462000'
@@ -147,61 +201,7 @@ func LoadShellHistory(limit int) []string {
 	return results
 }
 
-// GetSuggestions returns unique commands combined from store and shell history.
-// Stored commands appear first (prioritizing recently and frequently run commands),
-// followed by commands from shell history.
+// GetSuggestions returns unique commands from shell history.
 func (s *Store) GetSuggestions(limit int) []string {
-	if limit <= 0 {
-		limit = 500
-	}
-
-	var results []string
-	seen := make(map[string]bool)
-
-	if s != nil {
-		cmds := s.List()
-		sort.SliceStable(cmds, func(i, j int) bool {
-			if cmds[i].LastRunAt != nil && cmds[j].LastRunAt != nil {
-				return cmds[i].LastRunAt.After(*cmds[j].LastRunAt)
-			}
-			if cmds[i].LastRunAt != nil {
-				return true
-			}
-			if cmds[j].LastRunAt != nil {
-				return false
-			}
-			if cmds[i].RunCount != cmds[j].RunCount {
-				return cmds[i].RunCount > cmds[j].RunCount
-			}
-			return cmds[i].CreatedAt.After(cmds[j].CreatedAt)
-		})
-
-		for _, c := range cmds {
-			cmdStr := strings.TrimSpace(c.Cmd)
-			if cmdStr != "" && !seen[cmdStr] {
-				seen[cmdStr] = true
-				results = append(results, cmdStr)
-				if len(results) >= limit {
-					return results
-				}
-			}
-		}
-	}
-
-	// Supplement with shell history
-	remaining := limit - len(results)
-	if remaining > 0 {
-		shellCmds := LoadShellHistory(remaining)
-		for _, cmd := range shellCmds {
-			if !seen[cmd] {
-				seen[cmd] = true
-				results = append(results, cmd)
-				if len(results) >= limit {
-					break
-				}
-			}
-		}
-	}
-
-	return results
+	return LoadShellHistory(limit)
 }
