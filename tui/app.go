@@ -116,7 +116,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.searchInput.Width = max(20, msg.Width-14)
-		m.maxVisibleRows = max(4, (msg.Height-18)/2)
+		m.maxVisibleRows = max(4, msg.Height-18)
 		return m, nil
 
 	case clearToastMsg:
