@@ -58,6 +58,12 @@ func Load() (*Store, error) {
 	return LoadFrom(path)
 }
 
+// DirPerm defines the secure private directory permissions (0700: rwx------).
+const DirPerm os.FileMode = 0700
+
+// FilePerm defines the secure private file permissions (0600: rw-------).
+const FilePerm os.FileMode = 0600
+
 // LoadFrom loads commands from a specified file path.
 // If the file does not exist, an empty store is returned.
 func LoadFrom(path string) (*Store, error) {
@@ -88,12 +94,13 @@ func LoadFrom(path string) (*Store, error) {
 }
 
 // Save writes commands atomically to the store's file path.
+// Ensures private permissions (0700 for directory, 0600 for file).
 func (s *Store) Save() error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	dir := filepath.Dir(s.filePath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, DirPerm); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", dir, err)
 	}
 
@@ -104,8 +111,14 @@ func (s *Store) Save() error {
 
 	// Write to temporary file first for atomic replacement
 	tempFile := fmt.Sprintf("%s.tmp.%d", s.filePath, time.Now().UnixNano())
-	if err := os.WriteFile(tempFile, data, 0644); err != nil {
+	if err := os.WriteFile(tempFile, data, FilePerm); err != nil {
 		return fmt.Errorf("failed to write temporary store file: %w", err)
+	}
+
+	// Explicitly chmod the temporary file in case the process umask altered it
+	if err := os.Chmod(tempFile, FilePerm); err != nil {
+		_ = os.Remove(tempFile)
+		return fmt.Errorf("failed to set permissions on temporary store file: %w", err)
 	}
 
 	if err := os.Rename(tempFile, s.filePath); err != nil {

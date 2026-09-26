@@ -1,6 +1,7 @@
 package store
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -73,3 +74,40 @@ func TestStoreAddUpdateGetRemove(t *testing.T) {
 		t.Errorf("expected 'tunnel-one' to be removed")
 	}
 }
+
+func TestStorePrivatePermissions(t *testing.T) {
+	tempDir := t.TempDir()
+	storeDir := filepath.Join(tempDir, "subconfig", "cmdpp")
+	filePath := filepath.Join(storeDir, "commands.json")
+
+	s, err := LoadFrom(filePath)
+	if err != nil {
+		t.Fatalf("LoadFrom failed: %v", err)
+	}
+
+	_, _, err = s.AddOrUpdate("token-cmd", "export TOKEN=secret123", "sensitive token")
+	if err != nil {
+		t.Fatalf("AddOrUpdate failed: %v", err)
+	}
+
+	if err := s.Save(); err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+
+	dirInfo, err := os.Stat(storeDir)
+	if err != nil {
+		t.Fatalf("failed to stat storeDir: %v", err)
+	}
+	if perm := dirInfo.Mode().Perm(); perm != DirPerm {
+		t.Errorf("expected directory permissions %04o, got %04o", DirPerm, perm)
+	}
+
+	fileInfo, err := os.Stat(filePath)
+	if err != nil {
+		t.Fatalf("failed to stat filePath: %v", err)
+	}
+	if perm := fileInfo.Mode().Perm(); perm != FilePerm {
+		t.Errorf("expected file permissions %04o, got %04o", FilePerm, perm)
+	}
+}
+
