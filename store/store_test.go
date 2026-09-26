@@ -229,5 +229,3 @@ func TestIsSystemOrSharedDir(t *testing.T) {
 		}
 	}
 }
-
-
