@@ -64,12 +64,63 @@ const DirPerm os.FileMode = 0700
 // FilePerm defines the secure private file permissions (0600: rw-------).
 const FilePerm os.FileMode = 0600
 
+// isSystemOrSharedDir returns true if dir is a root, shared, or parent directory
+// that should not have its permissions restricted.
+func isSystemOrSharedDir(dir string) bool {
+	cleanDir := filepath.Clean(dir)
+	if cleanDir == "/" || cleanDir == "." || cleanDir == "" {
+		return true
+	}
+	if cleanDir == filepath.Clean(os.TempDir()) || cleanDir == "/tmp" || cleanDir == "/var/tmp" {
+		return true
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		if cleanDir == filepath.Clean(home) || cleanDir == filepath.Join(filepath.Clean(home), ".config") {
+			return true
+		}
+	}
+	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" && cleanDir == filepath.Clean(xdg) {
+		return true
+	}
+	return false
+}
+
+// MigratePermissions verifies and restricts permissions on the directory (mode 0700)
+// and store file (mode 0600) to ensure stored commands and tokens are private to the user.
+func MigratePermissions(filePath string) error {
+	dir := filepath.Dir(filePath)
+	if !isSystemOrSharedDir(dir) {
+		if fi, err := os.Stat(dir); err == nil && fi.IsDir() {
+			if fi.Mode().Perm() != DirPerm {
+				if err := os.Chmod(dir, DirPerm); err != nil {
+					return fmt.Errorf("failed to restrict directory permissions on %s: %w", dir, err)
+				}
+			}
+		}
+	}
+
+	if fi, err := os.Stat(filePath); err == nil && !fi.IsDir() {
+		if fi.Mode().Perm() != FilePerm {
+			if err := os.Chmod(filePath, FilePerm); err != nil {
+				return fmt.Errorf("failed to restrict file permissions on %s: %w", filePath, err)
+			}
+		}
+	}
+
+	return nil
+}
+
 // LoadFrom loads commands from a specified file path.
 // If the file does not exist, an empty store is returned.
+// Automatically migrates existing directory and file permissions to private modes (0700/0600).
 func LoadFrom(path string) (*Store, error) {
 	s := &Store{
 		filePath: path,
 		commands: make([]Command, 0),
+	}
+
+	if err := MigratePermissions(path); err != nil {
+		return nil, err
 	}
 
 	data, err := os.ReadFile(path)
@@ -104,6 +155,11 @@ func (s *Store) Save() error {
 		return fmt.Errorf("failed to create directory %s: %w", dir, err)
 	}
 
+	// Ensure directory permissions are private even if it already existed with open permissions
+	if err := MigratePermissions(s.filePath); err != nil {
+		return err
+	}
+
 	data, err := json.MarshalIndent(s.commands, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal commands: %w", err)
@@ -127,6 +183,11 @@ func (s *Store) Save() error {
 	}
 
 	return nil
+}
+
+// MigratePermissions checks and restricts permissions on the directory and store file to private modes.
+func (s *Store) MigratePermissions() error {
+	return MigratePermissions(s.filePath)
 }
 
 // AddOrUpdate adds a command or updates it if one with the same name already exists.
