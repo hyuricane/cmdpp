@@ -44,25 +44,25 @@ If you prefer to download and extract pre-compiled binaries manually without run
 * **Linux (x86_64 / amd64):**
   ```bash
   mkdir -p ~/.local/bin
-  curl -sSL https://github.com/hyuricane/cmdpp/releases/download/v0.1.0/cmdpp_0.1.0_linux_amd64.tar.gz | tar -xz -C ~/.local/bin ./cmdpp
+  curl -sSL https://github.com/hyuricane/cmdpp/releases/download/v0.1.3/cmdpp_0.1.3_linux_amd64.tar.gz | tar -xz -C ~/.local/bin ./cmdpp
   ```
 
 * **Linux (ARM64 / aarch64):**
   ```bash
   mkdir -p ~/.local/bin
-  curl -sSL https://github.com/hyuricane/cmdpp/releases/download/v0.1.0/cmdpp_0.1.0_linux_arm64.tar.gz | tar -xz -C ~/.local/bin ./cmdpp
+  curl -sSL https://github.com/hyuricane/cmdpp/releases/download/v0.1.3/cmdpp_0.1.3_linux_arm64.tar.gz | tar -xz -C ~/.local/bin ./cmdpp
   ```
 
 * **macOS (Apple Silicon - M1/M2/M3/M4 / arm64):**
   ```bash
   mkdir -p ~/.local/bin
-  curl -sSL https://github.com/hyuricane/cmdpp/releases/download/v0.1.0/cmdpp_0.1.0_darwin_arm64.tar.gz | tar -xz -C ~/.local/bin ./cmdpp
+  curl -sSL https://github.com/hyuricane/cmdpp/releases/download/v0.1.3/cmdpp_0.1.3_darwin_arm64.tar.gz | tar -xz -C ~/.local/bin ./cmdpp
   ```
 
 * **macOS (Intel / amd64):**
   ```bash
   mkdir -p ~/.local/bin
-  curl -sSL https://github.com/hyuricane/cmdpp/releases/download/v0.1.0/cmdpp_0.1.0_darwin_amd64.tar.gz | tar -xz -C ~/.local/bin ./cmdpp
+  curl -sSL https://github.com/hyuricane/cmdpp/releases/download/v0.1.3/cmdpp_0.1.3_darwin_amd64.tar.gz | tar -xz -C ~/.local/bin ./cmdpp
   ```
 
 * **Windows & Checksums:**
@@ -90,7 +90,7 @@ make install
 
 ### Verifying Release Artifacts
 
-All release archives (`.tar.gz`, `.zip`) and `checksums.txt` are built reproducibly and cryptographically signed with [GitHub Artifact Attestations](https://docs.github.com/en/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds) powered by Sigstore.
+All release archives (`.tar.gz`, `.zip`) and `checksums.txt` (starting from release `v0.1.3`) are built reproducibly and cryptographically signed with [GitHub Artifact Attestations](https://docs.github.com/en/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds) powered by Sigstore.
 
 You can verify the provenance and integrity of any downloaded release artifact using the [GitHub CLI](https://cli.github.com/):
 
@@ -100,7 +100,7 @@ gh attestation verify <path-to-file> --repo hyuricane/cmdpp
 
 **Example:**
 ```bash
-gh attestation verify cmdpp_0.1.0_linux_amd64.tar.gz --repo hyuricane/cmdpp
+gh attestation verify cmdpp_0.1.3_linux_amd64.tar.gz --repo hyuricane/cmdpp
 ```
 
 Or verify the checksum manifest:
