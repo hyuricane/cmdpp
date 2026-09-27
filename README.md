@@ -70,7 +70,7 @@ If you prefer to download and extract pre-compiled binaries manually without run
 
 ---
 
-### Option 2: Using `go install`
+### Option 3: Using `go install`
 If you have Go (1.22+) installed:
 ```bash
 go install github.com/hyuricane/cmdpp@latest
@@ -78,13 +78,39 @@ go install github.com/hyuricane/cmdpp@latest
 
 ---
 
-### Option 3: Build from Source
+### Option 4: Build from Source
 ```bash
 git clone https://github.com/hyuricane/cmdpp.git
 cd cmdpp
 make install
 ```
 *(By default, installs to `~/.local/bin/cmdpp`. You can customize the location with `PREFIX=/usr/local make install`)*
+
+---
+
+### Verifying Release Artifacts
+
+All release archives (`.tar.gz`, `.zip`) and `checksums.txt` are built reproducibly and cryptographically signed with [GitHub Artifact Attestations](https://docs.github.com/en/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds) powered by Sigstore.
+
+You can verify the provenance and integrity of any downloaded release artifact using the [GitHub CLI](https://cli.github.com/):
+
+```bash
+gh attestation verify <path-to-file> --repo hyuricane/cmdpp
+```
+
+**Example:**
+```bash
+gh attestation verify cmdpp_0.1.0_linux_amd64.tar.gz --repo hyuricane/cmdpp
+```
+
+Or verify the checksum manifest:
+```bash
+# Verify checksums.txt provenance
+gh attestation verify checksums.txt --repo hyuricane/cmdpp
+
+# Verify downloaded archives against checksums
+sha256sum --ignore-missing -c checksums.txt
+```
 
 ---
 

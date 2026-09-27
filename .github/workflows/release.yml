@@ -13,6 +13,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -55,6 +57,9 @@ jobs:
           rm -rf "${DIST_DIR}"
           mkdir -p "${DIST_DIR}"
 
+          # Set deterministic timestamp for reproducible builds
+          export SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
+
           TARGETS=(
             "linux/amd64"
             "linux/arm64"
@@ -86,18 +91,29 @@ jobs:
             [ -f README.md ] && cp README.md "${BUILD_DIR}/"
             [ -f LICENSE ] && cp LICENSE "${BUILD_DIR}/"
 
+            # Normalize file timestamps for reproducible archives
+            find "${BUILD_DIR}" -exec touch -d "@${SOURCE_DATE_EPOCH}" {} +
+
             ARCHIVE_NAME="cmdpp_${CLEAN_VERSION}_${GOOS}_${GOARCH}"
             if [ "${GOOS}" = "windows" ]; then
-              (cd "${BUILD_DIR}" && zip -9 -q "${OLDPWD}/${DIST_DIR}/${ARCHIVE_NAME}.zip" *)
+              (cd "${BUILD_DIR}" && zip -9 -X -q "${OLDPWD}/${DIST_DIR}/${ARCHIVE_NAME}.zip" *)
             else
-              tar -czf "${DIST_DIR}/${ARCHIVE_NAME}.tar.gz" -C "${BUILD_DIR}" .
+              tar --sort=name --mtime="@${SOURCE_DATE_EPOCH}" --owner=0 --group=0 --numeric-owner -czf "${DIST_DIR}/${ARCHIVE_NAME}.tar.gz" -C "${BUILD_DIR}" .
             fi
 
             rm -rf "${BUILD_DIR}"
           done
 
           echo "==> Generating SHA256 checksums..."
-          (cd "${DIST_DIR}" && sha256sum * > checksums.txt)
+          (cd "${DIST_DIR}" && sha256sum cmdpp_* > checksums.txt)
+
+      - name: Generate artifact attestations
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/checksums.txt
 
       - name: Create GitHub Release and Upload Assets
         uses: softprops/action-gh-release@v2
