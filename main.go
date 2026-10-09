@@ -11,7 +11,7 @@ import (
 	"github.com/hyuricane/cmdpp/tui"
 )
 
-var Version = "0.1.3"
+var Version = "0.2.0"
 
 func main() {
 	s, err := store.Load()
