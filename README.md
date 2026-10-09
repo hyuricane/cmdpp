@@ -12,6 +12,7 @@ A fast, keyboard-driven CLI and TUI tool to store, manage, and instantly trigger
 - **Pager Integration**: `cmdpp list` automatically pipes output through `more` when run in an interactive terminal.
 - **Execution Tracking**: Tracks execution counts and last-run timestamps for each command.
 - **In-TUI Add & Edit**: Add (`a`) or edit (`e`) commands right inside the TUI without leaving your keyboard.
+- **Named Arguments & Defaults**: Template commands with `${VAR:-default}` or `${VAR}` with interactive parameter modals in TUI and prompts in CLI.
 
 ---
 
@@ -145,7 +146,29 @@ cmdpp run tunnel-one
 ```
 Any extra arguments are automatically passed along to the executed command.
 
-### 3. Launch Interactive TUI Picker
+### 3. Named Input Arguments & Defaults
+You can parameterize commands with reusable placeholders:
+- `${VAR:-default}`: Optional parameter with a default value.
+- `${VAR}`: Required parameter without a default.
+- `\${VAR}`: Escaped literal `${VAR}` (ignored by `cmdpp`).
+
+**Example:**
+```bash
+cmdpp add tunnel --cmd 'ssh -N -L ${PORT:-3000}:127.0.0.1:${PORT:-3000} user@host.com'
+```
+
+When executing:
+- **Interactive TUI**: Pressing `Enter` opens the **Parameters Modal**:
+  - `[Enter]`: Runs the command (on the last/single field) or advances to the next field.
+  - `[Tab]` / `[Shift+Tab]`: Navigates between fields.
+  - `[Esc]`: Cancels and returns to the command list.
+- **CLI**: Prompts interactively if omitted, or supply overrides directly:
+  ```bash
+  cmdpp run tunnel            # Prompts: PORT [3000]: (press Enter to accept default)
+  cmdpp run tunnel PORT=8080  # Overrides PORT directly without prompting
+  ```
+
+### 4. Launch Interactive TUI Picker
 Simply run `cmdpp` without arguments:
 ```bash
 cmdpp
@@ -165,7 +188,7 @@ Select a command with `↑`/`↓` (or `j`/`k`) and press `Enter` to execute it d
 | `Esc` | Clear filter / cancel modal |
 | `q` / `Ctrl+C` | Quit without running |
 
-### 4. List Stored Commands
+### 5. List Stored Commands
 ```bash
 cmdpp list
 ```
@@ -175,13 +198,13 @@ To disable the pager explicitly:
 cmdpp list --no-pager
 ```
 
-### 5. Delete a Stored Command
+### 6. Delete a Stored Command
 ```bash
 cmdpp rm <name>
 ```
 *(Aliases: `cmdpp remove <name>`, `cmdpp delete <name>`)*
 
-### 6. Help & Documentation
+### 7. Help & Documentation
 ```bash
 cmdpp --help
 ```

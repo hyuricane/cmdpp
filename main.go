@@ -85,7 +85,7 @@ func runTUI(s *store.Store) {
 
 	if finalState, ok := finalModel.(tui.Model); ok {
 		if finalState.Action() == tui.ActionRun && finalState.ChosenCommand() != nil {
-			exitCode, err := cli.Run(s, []string{finalState.ChosenCommand().Name})
+			exitCode, err := cli.RunDirect(s, finalState.ChosenCommand(), nil)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			}

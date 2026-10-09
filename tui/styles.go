@@ -91,6 +91,9 @@ var (
 			Foreground(SecondaryColor).
 			Bold(true)
 
+	DetailParamStyle = lipgloss.NewStyle().
+				Foreground(WarningColor)
+
 	// Help / Footer styles
 	HelpBarStyle = lipgloss.NewStyle().
 			Foreground(MutedColor).

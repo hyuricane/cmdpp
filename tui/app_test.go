@@ -126,3 +126,49 @@ func TestTUIFlow(t *testing.T) {
 		t.Errorf("expected %q to be deleted from store", targetName)
 	}
 }
+
+func TestTUIParamModalFlow(t *testing.T) {
+	tempDir := t.TempDir()
+	storePath := filepath.Join(tempDir, "commands.json")
+
+	s, err := store.LoadFrom(storePath)
+	if err != nil {
+		t.Fatalf("LoadFrom failed: %v", err)
+	}
+
+	_, _, _ = s.AddOrUpdate("tunnel", "ssh -N -L ${PORT:-3000}:127.0.0.1:${PORT:-3000} user@host.com", "SSH tunnel")
+	_ = s.Save()
+
+	m := NewModel(s)
+	modelInterface, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	m = modelInterface.(Model)
+
+	// Cursor is at 0 (tunnel). Press Enter -> should open ParamModal
+	modelInterface, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = modelInterface.(Model)
+
+	if m.paramModal == nil {
+		t.Fatalf("expected paramModal to open for command with parameters")
+	}
+	if m.Action() != ActionNone {
+		t.Errorf("expected ActionNone while modal is active, got %v", m.Action())
+	}
+
+	// Press Enter in paramModal -> submits with default 3000 and runs
+	modelInterface, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = modelInterface.(Model)
+
+	if m.Action() != ActionRun {
+		t.Errorf("expected ActionRun after submitting paramModal, got %v", m.Action())
+	}
+	if cmd == nil {
+		t.Errorf("expected quit cmd, got nil")
+	}
+	if m.ChosenCommand() == nil {
+		t.Fatalf("expected ChosenCommand not nil")
+	}
+	expectedCmd := "ssh -N -L 3000:127.0.0.1:3000 user@host.com"
+	if m.ChosenCommand().Cmd != expectedCmd {
+		t.Errorf("expected substituted cmd %q, got %q", expectedCmd, m.ChosenCommand().Cmd)
+	}
+}

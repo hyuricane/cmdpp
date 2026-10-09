@@ -107,6 +107,18 @@ func Add(s *store.Store, out io.Writer, args []string) error {
 	}
 
 	fmt.Fprintf(out, "  %s %s\n", dimStyle.Render("Command:"), cmd.Cmd)
+	params := store.ExtractParams(cmd.Cmd)
+	if len(params) > 0 {
+		var pList []string
+		for _, p := range params {
+			if p.HasDefault {
+				pList = append(pList, fmt.Sprintf("%s [default: %s]", p.Name, p.DefaultValue))
+			} else {
+				pList = append(pList, p.Name)
+			}
+		}
+		fmt.Fprintf(out, "  %s %s\n", dimStyle.Render("Parameters:"), cyanStyle.Render(strings.Join(pList, ", ")))
+	}
 	if cmd.Description != "" {
 		fmt.Fprintf(out, "  %s %s\n", dimStyle.Render("Description:"), cmd.Description)
 	}
