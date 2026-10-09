@@ -50,6 +50,14 @@ func PrintHelp(out io.Writer) {
     $ %s
 
   %s
+    Add command with named parameters & defaults:
+    $ %s
+
+  %s
+    Execute with parameter override:
+    $ %s
+
+  %s
     List stored commands (pages with 'more'):
     $ %s
 
@@ -64,7 +72,7 @@ func PrintHelp(out io.Writer) {
 %s
   Inside the TUI picker:
   • %s / %s    Navigate commands
-  • %s         Execute selected command
+  • %s         Execute selected command (prompts for parameters if needed)
   • %s         Search & filter commands
   • %s         Add a new command
   • %s         Edit selected command
@@ -78,7 +86,7 @@ func PrintHelp(out io.Writer) {
 		cmdHeader.Render("USAGE:"),
 		cmdHeader.Render("COMMANDS:"),
 		exStyle.Render("add <name> --cmd \"<cmd>\""),
-		exStyle.Render("run <name> [args...]    "),
+		exStyle.Render("run <name> [KEY=VAL...] [args...]"),
 		exStyle.Render("rm <name>               "),
 		exStyle.Render("list [--no-pager]       "),
 		exStyle.Render("help, --help, -h        "),
@@ -92,11 +100,15 @@ func PrintHelp(out io.Writer) {
 		subStyle.Render(`cmdpp run tunnel-one`),
 		flagStyle.Render("4. Run with extra arguments:"),
 		subStyle.Render(`cmdpp run tunnel-one -v`),
-		flagStyle.Render("5. List commands:"),
+		flagStyle.Render("5. Add with named parameters:"),
+		subStyle.Render(`cmdpp add tunnel --cmd 'ssh -N -L ${PORT:-3000}:127.0.0.1:${PORT:-3000} user@host.com'`),
+		flagStyle.Render("6. Run with parameter override:"),
+		subStyle.Render(`cmdpp run tunnel PORT=8080`),
+		flagStyle.Render("7. List commands:"),
 		subStyle.Render(`cmdpp list`),
-		flagStyle.Render("6. Delete a command:"),
+		flagStyle.Render("8. Delete a command:"),
 		subStyle.Render(`cmdpp rm tunnel-one`),
-		flagStyle.Render("7. Interactive TUI:"),
+		flagStyle.Render("9. Interactive TUI:"),
 		subStyle.Render(`cmdpp`),
 		cmdHeader.Render("TUI SHORTCUTS:"),
 		exStyle.Render("↑/↓"), exStyle.Render("j/k"),

@@ -35,6 +35,7 @@ type Model struct {
 	searchInput     textinput.Model
 	searchFocused   bool
 	modal           *ModalModel
+	paramModal      *ParamModalModel
 	isConfirmingDel bool
 	toastMsg        string
 	toastIsErr      bool
@@ -117,6 +118,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		m.searchInput.Width = max(20, msg.Width-14)
 		m.maxVisibleRows = max(4, msg.Height-18)
+		if m.paramModal != nil {
+			m.paramModal.Width = msg.Width
+		}
 		return m, nil
 
 	case clearToastMsg:
@@ -124,7 +128,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
-		// 1. If Add/Edit Modal is active
+		// 1. If Parameter Modal is active
+		if m.paramModal != nil {
+			var cmd tea.Cmd
+			*m.paramModal, cmd = m.paramModal.Update(msg)
+			if m.paramModal.Canceled {
+				m.paramModal = nil
+				return m, nil
+			}
+			if m.paramModal.Submitted {
+				values := m.paramModal.Values()
+				substitutedCmd := store.SubstituteParams(m.paramModal.Command.Cmd, values)
+				cmdCopy := *m.paramModal.Command
+				cmdCopy.Cmd = substitutedCmd
+				m.chosenCommand = &cmdCopy
+				m.action = ActionRun
+				m.paramModal = nil
+				return m, tea.Quit
+			}
+			return m, cmd
+		}
+
+		// 2. If Add/Edit Modal is active
 		if m.modal != nil {
 			cmd, saved, canceled := m.modal.Update(msg)
 			if canceled {
@@ -196,6 +221,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// If query has matches, pressing enter can either run selected or blur search
 				if len(m.filtered) > 0 {
 					sel := m.filtered[m.cursor]
+					params := store.ExtractParams(sel.Cmd)
+					if len(params) > 0 {
+						modal := NewParamModal(&sel, params)
+						modal.Width = m.width
+						m.paramModal = &modal
+						m.searchFocused = false
+						m.searchInput.Blur()
+						return m, nil
+					}
 					m.chosenCommand = &sel
 					m.action = ActionRun
 					return m, tea.Quit
@@ -235,6 +269,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			if len(m.filtered) > 0 {
 				sel := m.filtered[m.cursor]
+				params := store.ExtractParams(sel.Cmd)
+				if len(params) > 0 {
+					modal := NewParamModal(&sel, params)
+					modal.Width = m.width
+					m.paramModal = &modal
+					return m, nil
+				}
 				m.chosenCommand = &sel
 				m.action = ActionRun
 				return m, tea.Quit
@@ -306,6 +347,14 @@ func (m *Model) moveCursorDown() {
 
 // View renders the TUI screen.
 func (m Model) View() string {
+	if m.paramModal != nil {
+		modalView := m.paramModal.View()
+		if m.width > 0 && m.height > 0 {
+			return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, modalView)
+		}
+		return modalView
+	}
+
 	if m.modal != nil {
 		modalView := m.modal.View()
 		if m.width > 0 && m.height > 0 {
@@ -398,6 +447,18 @@ func (m Model) View() string {
 		selected := m.filtered[m.cursor]
 		var detailContent strings.Builder
 		detailContent.WriteString(DetailLabelStyle.Render("Command: ") + DetailCmdStyle.Render(selected.Cmd) + "\n")
+		params := store.ExtractParams(selected.Cmd)
+		if len(params) > 0 {
+			var pList []string
+			for _, p := range params {
+				if p.HasDefault {
+					pList = append(pList, fmt.Sprintf("%s [%s]", p.Name, p.DefaultValue))
+				} else {
+					pList = append(pList, p.Name)
+				}
+			}
+			detailContent.WriteString(DetailLabelStyle.Render("Params:  ") + DetailParamStyle.Render(strings.Join(pList, ", ")) + "\n")
+		}
 		if selected.Description != "" {
 			detailContent.WriteString(DetailLabelStyle.Render("About:   ") + DetailValueStyle.Render(selected.Description) + "\n")
 		}
