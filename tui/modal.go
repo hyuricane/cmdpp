@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -44,6 +45,7 @@ func NewModal(mode ModalMode, initialName, initialCmd, initialDesc string, sugge
 
 	// 1. Name input
 	inputs[0] = textinput.New()
+	inputs[0].KeyMap.Paste = key.NewBinding()
 	inputs[0].Placeholder = "tunnel-one"
 	inputs[0].Focus()
 	inputs[0].CharLimit = 64
@@ -52,6 +54,7 @@ func NewModal(mode ModalMode, initialName, initialCmd, initialDesc string, sugge
 
 	// 2. Command input
 	inputs[1] = textinput.New()
+	inputs[1].KeyMap.Paste = key.NewBinding()
 	inputs[1].Placeholder = "ssh -N -L user@ssh.example.org"
 	inputs[1].CharLimit = 1024
 	inputs[1].Width = 50
@@ -59,6 +62,7 @@ func NewModal(mode ModalMode, initialName, initialCmd, initialDesc string, sugge
 
 	// 3. Description input
 	inputs[2] = textinput.New()
+	inputs[2].KeyMap.Paste = key.NewBinding()
 	inputs[2].Placeholder = "Optional description or notes"
 	inputs[2].CharLimit = 256
 	inputs[2].Width = 50
@@ -325,7 +329,8 @@ func (m *ModalModel) renderDropdown() string {
 	} else {
 		headerText = fmt.Sprintf("▾ Suggestions (%d matches):", total)
 	}
-	sb.WriteString(DropdownHeaderStyle.Render(headerText) + "\n")
+	sb.WriteString(DropdownHeaderStyle.Render(headerText))
+	sb.WriteRune('\n')
 
 	maxCmdWidth := max(30, m.Width-16)
 	start := m.DropdownViewportTop
@@ -360,7 +365,8 @@ func (m *ModalModel) renderDropdown() string {
 			scrollHints = append(scrollHints, fmt.Sprintf("▼ %d more", total-end))
 		}
 		if len(scrollHints) > 0 {
-			sb.WriteString("\n" + DropdownHintStyle.Render(strings.Join(scrollHints, "  ")))
+			sb.WriteRune('\n')
+			sb.WriteString(DropdownHintStyle.Render(strings.Join(scrollHints, "  ")))
 		}
 	}
 
@@ -377,7 +383,9 @@ func (m *ModalModel) View() string {
 	}
 
 	var b strings.Builder
-	b.WriteString(title + "\n\n")
+	b.WriteString(title)
+	b.WriteRune('\n')
+	b.WriteRune('\n')
 
 	labels := []string{"Name:", "Command:", "Description:"}
 	for i, input := range m.Inputs {
@@ -386,18 +394,23 @@ func (m *ModalModel) View() string {
 		if i == m.FocusIndex && (i != 1 || m.SelectedSugIndex == -1) {
 			boxStyle = ModalInputActive
 		}
-		b.WriteString(label + "\n")
-		b.WriteString(boxStyle.Render(input.View()) + "\n")
+		b.WriteString(label)
+		b.WriteRune('\n')
+		b.WriteString(boxStyle.Render(input.View()))
+		b.WriteRune('\n')
 
 		if i == 1 && m.FocusIndex == 1 && len(m.FilteredSuggestions) > 0 {
-			b.WriteString(m.renderDropdown() + "\n")
+			b.WriteString(m.renderDropdown())
+			b.WriteRune('\n')
 		} else {
-			b.WriteString("\n")
+			b.WriteRune('\n')
 		}
 	}
 
 	if m.ErrMessage != "" {
-		b.WriteString(ToastDangerStyle.Render("⚠️ "+m.ErrMessage) + "\n\n")
+		b.WriteString(ToastDangerStyle.Render("⚠️ " + m.ErrMessage))
+		b.WriteRune('\n')
+		b.WriteRune('\n')
 	}
 
 	var controls string
