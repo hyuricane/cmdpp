@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/hyuricane/cmdpp/cli"
+	"github.com/hyuricane/cmdpp/clipboardsafe"
 	"github.com/hyuricane/cmdpp/store"
 )
 
@@ -128,6 +129,44 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
+		// Global Paste inteceptor (ctrl+v)
+		if msg.String() == "ctrl+v" {
+			var inputModel *textinput.Model
+			if m.paramModal != nil {
+				if len(m.paramModal.Inputs) > m.paramModal.FocusIndex {
+					inputModel = &m.paramModal.Inputs[m.paramModal.FocusIndex]
+				}
+			} else if m.modal != nil {
+				if len(m.modal.Inputs) > m.modal.FocusIndex {
+					inputModel = &m.modal.Inputs[m.modal.FocusIndex]
+				}
+			} else if m.searchFocused {
+				inputModel = &m.searchInput
+			} else {
+				return m, nil
+			}
+			if inputModel == nil {
+				return m, nil
+			}
+			pasteText, err := clipboardsafe.ReadAllLimited()
+			if err != nil {
+				return m, m.setToast(fmt.Sprintf("Paste failed: %s", err.Error()), true)
+			}
+			if len(pasteText) == 0 {
+				return m, nil
+			}
+			err = insertAtCursor(inputModel, pasteText)
+			if err != nil {
+				return m, m.setToast(fmt.Sprintf("Paste failed: %s", err.Error()), true)
+			}
+			if m.searchFocused {
+				m.filterCommands()
+			} else if m.modal != nil {
+				m.modal.updateSuggestions()
+			}
+			return m, nil
+		}
+
 		// 1. If Parameter Modal is active
 		if m.paramModal != nil {
 			var cmd tea.Cmd
@@ -528,16 +567,19 @@ func (m Model) ChosenCommand() *store.Command {
 	return m.chosenCommand
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
+func insertAtCursor(input *textinput.Model, txt string) error {
+	runes := []rune(input.Value())
+	insertRunes := []rune(txt)
+	cursorPos := min(max(0, input.Position()), len(runes))
+	if input.CharLimit > 0 && len(runes)+len(insertRunes) > input.CharLimit {
+		return fmt.Errorf("Input length exceeds %d characters", input.CharLimit)
 	}
-	return b
-}
 
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
+	newvalue := make([]rune, 0, len(runes)+len(insertRunes))
+	newvalue = append(newvalue, runes[:cursorPos]...)
+	newvalue = append(newvalue, insertRunes...)
+	newvalue = append(newvalue, runes[cursorPos:]...)
+	input.SetValue(string(newvalue))
+	input.SetCursor(cursorPos + len(insertRunes))
+	return nil
 }
