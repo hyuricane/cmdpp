@@ -149,7 +149,9 @@ func (m ParamModalModel) View() string {
 
 	// Header / Title
 	title := ModalTitleStyle.Render(fmt.Sprintf("Parameters: %s", m.Command.Name))
-	b.WriteString(title + "\n\n")
+	b.WriteString(title)
+	b.WriteRune('\n')
+	b.WriteRune('\n')
 
 	// Render parameter inputs
 	for i, p := range m.Params {
@@ -163,23 +165,32 @@ func (m ParamModalModel) View() string {
 		}
 
 		labelRendered := ModalFieldLabelStyle.Render(label)
-		b.WriteString(labelRendered + "\n")
+		b.WriteString(labelRendered)
+		b.WriteRune('\n')
 
 		inputBoxStyle := ModalInputInactive
 		if isFocused {
 			inputBoxStyle = ModalInputActive
 		}
-		b.WriteString(inputBoxStyle.Render(m.Inputs[i].View()) + "\n\n")
+		b.WriteString(inputBoxStyle.Render(m.Inputs[i].View()))
+		b.WriteRune('\n')
+		b.WriteRune('\n')
 	}
 
 	// Live preview
 	previewLabel := lipgloss.NewStyle().Bold(true).Foreground(PrimaryColor).Render("Preview:")
 	previewCmd := lipgloss.NewStyle().Foreground(TextColor).Italic(true).Render(m.Preview())
-	b.WriteString(previewLabel + "\n" + previewCmd + "\n\n")
+	b.WriteString(previewLabel)
+	b.WriteRune('\n')
+	b.WriteString(previewCmd)
+	b.WriteRune('\n')
+	b.WriteRune('\n')
 
 	// Error message
 	if m.ErrMessage != "" {
-		b.WriteString(ToastDangerStyle.Render("⚠️  "+m.ErrMessage) + "\n\n")
+		b.WriteString(ToastDangerStyle.Render("⚠️  " + m.ErrMessage))
+		b.WriteRune('\n')
+		b.WriteRune('\n')
 	}
 
 	// Footer / Keybindings

@@ -1,3 +1,4 @@
+// Package tui handles everyting TUI
 package tui
 
 import (
@@ -410,7 +411,9 @@ func (m Model) View() string {
 	logo := LogoStyle.Render("cmdpp")
 	title := TitleStyle.Render("Command Launcher")
 	count := CountBadgeStyle.Render(fmt.Sprintf("(%d/%d commands)", len(m.filtered), len(m.commands)))
-	b.WriteString(lipgloss.JoinHorizontal(lipgloss.Center, logo, title, count) + "\n\n")
+	b.WriteString(lipgloss.JoinHorizontal(lipgloss.Center, logo, title, count))
+	b.WriteRune('\n')
+	b.WriteRune('\n')
 
 	// 2. Search Input
 	searchStyle := SearchBoxStyle
@@ -418,7 +421,8 @@ func (m Model) View() string {
 		searchStyle = SearchBoxFocusedStyle
 	}
 	searchBox := searchStyle.Render("🔍 " + m.searchInput.View())
-	b.WriteString(searchBox + "\n")
+	b.WriteString(searchBox)
+	b.WriteRune('\n')
 
 	// 3. Command List
 	if len(m.filtered) == 0 {
@@ -471,15 +475,17 @@ func (m Model) View() string {
 			}
 
 			if isSelected {
-				b.WriteString(SelectedItemStyle.Render(line) + "\n")
+				b.WriteString(SelectedItemStyle.Render(line))
 			} else {
-				b.WriteString(NormalItemStyle.Render(line) + "\n")
+				b.WriteString(NormalItemStyle.Render(line))
 			}
+			b.WriteRune('\n')
 		}
 
 		if len(m.filtered) > m.maxVisibleRows {
 			scrollInfo := fmt.Sprintf(" Showing %d-%d of %d ", m.viewportTop+1, visibleEnd, len(m.filtered))
-			b.WriteString(ItemMetaStyle.Render(scrollInfo) + "\n")
+			b.WriteString(ItemMetaStyle.Render(scrollInfo))
+			b.WriteRune('\n')
 		}
 	}
 
@@ -487,7 +493,9 @@ func (m Model) View() string {
 	if len(m.filtered) > 0 && m.cursor < len(m.filtered) {
 		selected := m.filtered[m.cursor]
 		var detailContent strings.Builder
-		detailContent.WriteString(DetailLabelStyle.Render("Command: ") + DetailCmdStyle.Render(selected.Cmd) + "\n")
+		detailContent.WriteString(DetailLabelStyle.Render("Command: "))
+		detailContent.WriteString(DetailCmdStyle.Render(selected.Cmd))
+		detailContent.WriteRune('\n')
 		params := store.ExtractParams(selected.Cmd)
 		if len(params) > 0 {
 			var pList []string
@@ -498,10 +506,14 @@ func (m Model) View() string {
 					pList = append(pList, p.Name)
 				}
 			}
-			detailContent.WriteString(DetailLabelStyle.Render("Params:  ") + DetailParamStyle.Render(strings.Join(pList, ", ")) + "\n")
+			detailContent.WriteString(DetailLabelStyle.Render("Params:  "))
+			detailContent.WriteString(DetailParamStyle.Render(strings.Join(pList, ", ")))
+			detailContent.WriteRune('\n')
 		}
 		if selected.Description != "" {
-			detailContent.WriteString(DetailLabelStyle.Render("About:   ") + DetailValueStyle.Render(selected.Description) + "\n")
+			detailContent.WriteString(DetailLabelStyle.Render("About:   "))
+			detailContent.WriteString(DetailValueStyle.Render(selected.Description))
+			detailContent.WriteRune('\n')
 		}
 		lastRun := "Never"
 		if selected.LastRunAt != nil {
@@ -517,19 +529,27 @@ func (m Model) View() string {
 
 		paneWidth := max(40, m.width-4)
 		detailPane := DetailPaneStyle.Width(paneWidth).Render(detailContent.String())
-		b.WriteString("\n" + detailPane + "\n")
+		b.WriteRune('\n')
+		b.WriteString(detailPane)
+		b.WriteRune('\n')
 	}
 
 	// 5. Toast / Notification / Confirm Delete
 	if m.isConfirmingDel && len(m.filtered) > 0 {
 		sel := m.filtered[m.cursor]
 		prompt := fmt.Sprintf("⚠️  Are you sure you want to delete %q?  [y] Yes   [n/Esc] Cancel", sel.Name)
-		b.WriteString("\n" + ToastDangerStyle.Render(prompt) + "\n")
+		b.WriteRune('\n')
+		b.WriteString(ToastDangerStyle.Render(prompt))
+		b.WriteRune('\n')
 	} else if m.toastMsg != "" {
 		if m.toastIsErr {
-			b.WriteString("\n" + ToastDangerStyle.Render("⚠️  "+m.toastMsg) + "\n")
+			b.WriteRune('\n')
+			b.WriteString(ToastDangerStyle.Render("⚠️  " + m.toastMsg))
+			b.WriteRune('\n')
 		} else {
-			b.WriteString("\n" + ToastSuccessStyle.Render(m.toastMsg) + "\n")
+			b.WriteRune('\n')
+			b.WriteString(ToastSuccessStyle.Render(m.toastMsg))
+			b.WriteRune('\n')
 		}
 	}
 
@@ -554,7 +574,8 @@ func (m Model) View() string {
 			HelpKeyStyle.Render("[q]"), HelpDescStyle.Render(" Quit"),
 		)
 	}
-	b.WriteString("\n" + HelpBarStyle.Render(helpBar))
+	b.WriteString("\n")
+	b.WriteString(HelpBarStyle.Render(helpBar))
 
 	return b.String()
 }
@@ -574,7 +595,7 @@ func insertAtCursor(input *textinput.Model, txt string) error {
 	insertRunes := []rune(txt)
 	cursorPos := min(max(0, input.Position()), len(runes))
 	if input.CharLimit > 0 && len(runes)+len(insertRunes) > input.CharLimit {
-		return fmt.Errorf("Input length exceeds %d characters", input.CharLimit)
+		return fmt.Errorf("input length exceeds %d characters", input.CharLimit)
 	}
 
 	newvalue := make([]rune, 0, len(runes)+len(insertRunes))

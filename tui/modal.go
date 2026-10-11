@@ -329,7 +329,8 @@ func (m *ModalModel) renderDropdown() string {
 	} else {
 		headerText = fmt.Sprintf("▾ Suggestions (%d matches):", total)
 	}
-	sb.WriteString(DropdownHeaderStyle.Render(headerText) + "\n")
+	sb.WriteString(DropdownHeaderStyle.Render(headerText))
+	sb.WriteRune('\n')
 
 	maxCmdWidth := max(30, m.Width-16)
 	start := m.DropdownViewportTop
@@ -364,7 +365,8 @@ func (m *ModalModel) renderDropdown() string {
 			scrollHints = append(scrollHints, fmt.Sprintf("▼ %d more", total-end))
 		}
 		if len(scrollHints) > 0 {
-			sb.WriteString("\n" + DropdownHintStyle.Render(strings.Join(scrollHints, "  ")))
+			sb.WriteRune('\n')
+			sb.WriteString(DropdownHintStyle.Render(strings.Join(scrollHints, "  ")))
 		}
 	}
 
@@ -381,7 +383,9 @@ func (m *ModalModel) View() string {
 	}
 
 	var b strings.Builder
-	b.WriteString(title + "\n\n")
+	b.WriteString(title)
+	b.WriteRune('\n')
+	b.WriteRune('\n')
 
 	labels := []string{"Name:", "Command:", "Description:"}
 	for i, input := range m.Inputs {
@@ -390,18 +394,23 @@ func (m *ModalModel) View() string {
 		if i == m.FocusIndex && (i != 1 || m.SelectedSugIndex == -1) {
 			boxStyle = ModalInputActive
 		}
-		b.WriteString(label + "\n")
-		b.WriteString(boxStyle.Render(input.View()) + "\n")
+		b.WriteString(label)
+		b.WriteRune('\n')
+		b.WriteString(boxStyle.Render(input.View()))
+		b.WriteRune('\n')
 
 		if i == 1 && m.FocusIndex == 1 && len(m.FilteredSuggestions) > 0 {
-			b.WriteString(m.renderDropdown() + "\n")
+			b.WriteString(m.renderDropdown())
+			b.WriteRune('\n')
 		} else {
-			b.WriteString("\n")
+			b.WriteRune('\n')
 		}
 	}
 
 	if m.ErrMessage != "" {
-		b.WriteString(ToastDangerStyle.Render("⚠️ "+m.ErrMessage) + "\n\n")
+		b.WriteString(ToastDangerStyle.Render("⚠️ " + m.ErrMessage))
+		b.WriteRune('\n')
+		b.WriteRune('\n')
 	}
 
 	var controls string
