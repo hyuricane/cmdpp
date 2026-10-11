@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -27,6 +28,7 @@ func NewParamModal(cmd *store.Command, params []store.Param) ParamModalModel {
 	inputs := make([]textinput.Model, len(params))
 	for i, p := range params {
 		ti := textinput.New()
+		ti.KeyMap.Paste = key.NewBinding()
 		ti.CharLimit = 256
 		ti.Width = 46
 		if p.HasDefault {

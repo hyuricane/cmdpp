@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -44,6 +45,7 @@ func NewModal(mode ModalMode, initialName, initialCmd, initialDesc string, sugge
 
 	// 1. Name input
 	inputs[0] = textinput.New()
+	inputs[0].KeyMap.Paste = key.NewBinding()
 	inputs[0].Placeholder = "tunnel-one"
 	inputs[0].Focus()
 	inputs[0].CharLimit = 64
@@ -52,6 +54,7 @@ func NewModal(mode ModalMode, initialName, initialCmd, initialDesc string, sugge
 
 	// 2. Command input
 	inputs[1] = textinput.New()
+	inputs[1].KeyMap.Paste = key.NewBinding()
 	inputs[1].Placeholder = "ssh -N -L user@ssh.example.org"
 	inputs[1].CharLimit = 1024
 	inputs[1].Width = 50
@@ -59,6 +62,7 @@ func NewModal(mode ModalMode, initialName, initialCmd, initialDesc string, sugge
 
 	// 3. Description input
 	inputs[2] = textinput.New()
+	inputs[2].KeyMap.Paste = key.NewBinding()
 	inputs[2].Placeholder = "Optional description or notes"
 	inputs[2].CharLimit = 256
 	inputs[2].Width = 50

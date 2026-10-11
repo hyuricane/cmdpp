@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -47,6 +48,7 @@ type Model struct {
 // NewModel initializes the TUI model.
 func NewModel(s *store.Store) Model {
 	ti := textinput.New()
+	ti.KeyMap.Paste = key.NewBinding()
 	ti.Placeholder = "Type to filter commands... (press / to search)"
 	ti.CharLimit = 100
 	ti.Width = 60
