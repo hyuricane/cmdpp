@@ -1,3 +1,5 @@
+// Package clipboardsafe
+// handle reading from clipboard safely
 package clipboardsafe
 
 import (
@@ -6,6 +8,7 @@ import (
 	"io"
 	"os/exec"
 	"runtime"
+	"syscall"
 	"time"
 
 	"github.com/atotto/clipboard"
@@ -46,6 +49,9 @@ func ReadAllLimited() (string, error) {
 		return limitedAtotto()
 	}
 
+	// group spawned processes
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
 	out, err := cmd.StdoutPipe()
 	if err != nil {
 		return "", err
@@ -54,10 +60,31 @@ func ReadAllLimited() (string, error) {
 		return "", err
 	}
 
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+		select {
+		case <-ctx.Done():
+			_ = out.Close()
+		case <-done:
+
+		}
+	}()
+
 	limited := io.LimitReader(out, MaxClipboardBytes+1)
 	data, err := io.ReadAll(limited)
-	_ = cmd.Process.Kill()
+
+	// cleanup spawned processes first
+	_ = out.Close()
+	if cmd.Process != nil {
+		// kill paste processes
+		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	}
 	_ = cmd.Wait()
+
+	if ctx.Err() != nil {
+		return "", fmt.Errorf("clipboard read timed out ")
+	}
 
 	if err != nil {
 		return "", err
