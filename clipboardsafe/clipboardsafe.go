@@ -8,7 +8,6 @@ import (
 	"io"
 	"os/exec"
 	"runtime"
-	"syscall"
 	"time"
 
 	"github.com/atotto/clipboard"
@@ -49,8 +48,11 @@ func ReadAllLimited() (string, error) {
 		return limitedAtotto()
 	}
 
-	// group spawned processes
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	return readFromCmd(ctx, cmd)
+}
+
+func readFromCmd(ctx context.Context, cmd *exec.Cmd) (string, error) {
+	setProcessGroup(cmd)
 
 	out, err := cmd.StdoutPipe()
 	if err != nil {
@@ -67,7 +69,6 @@ func ReadAllLimited() (string, error) {
 		case <-ctx.Done():
 			_ = out.Close()
 		case <-done:
-
 		}
 	}()
 
@@ -76,14 +77,11 @@ func ReadAllLimited() (string, error) {
 
 	// cleanup spawned processes first
 	_ = out.Close()
-	if cmd.Process != nil {
-		// kill paste processes
-		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-	}
+	killProcessGroup(cmd)
 	_ = cmd.Wait()
 
 	if ctx.Err() != nil {
-		return "", fmt.Errorf("clipboard read timed out ")
+		return "", fmt.Errorf("clipboard read timed out")
 	}
 
 	if err != nil {
